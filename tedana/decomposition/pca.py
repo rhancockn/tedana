@@ -80,8 +80,8 @@ def run_gavishpca(data):
     ppca.fit(data)
     cutoff = np.median(ppca.singular_values_) * 4 / np.sqrt(3)
     n_dim = np.argmax(ppca.singular_values_ < cutoff)
-    v = ppca.components_[n_dim,:].T
-    s = ppca.explained_variance_[n_dim]
+    v = ppca.components_[0:n_dim,:].T
+    s = ppca.explained_variance_[0:n_dim]
     u = np.dot(np.dot(data, v), np.diag(1. / s))
     return u, s, v
 

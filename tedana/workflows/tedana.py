@@ -25,6 +25,8 @@ from tedana import (decay, combine, decomposition, io, model, selection, utils,
 import tedana.gscontrol as gsc
 from tedana.workflows.parser_utils import is_valid_file
 
+import pdb
+
 LGR = logging.getLogger(__name__)
 
 
