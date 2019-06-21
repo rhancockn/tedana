@@ -78,8 +78,10 @@ def run_gavishpca(data):
     # do PC dimension selection and get eigenvalue cutoff
     ppca = PCA(n_components=None, svd_solver='full')
     ppca.fit(data)
-    cutoff = np.median(ppca.singular_values_) * 4 / np.sqrt(3)
-    n_dim = np.argmax(ppca.singular_values_ < cutoff)
+    #cutoff = np.median(ppca.singular_values_) * 4 / np.sqrt(3)
+    cutoff = 4.0/np.sqrt(3.0) * np.sqrt(ppca.noise_variance_) * np.sqrt(ppca.n_components_)
+    print(ppca.singular_values_)
+    n_dim = np.argmax(ppca.singular_values_ < cutoff) + 1
     v = ppca.components_[0:n_dim,:].T
     s = ppca.explained_variance_[0:n_dim]
     u = np.dot(np.dot(data, v), np.diag(1. / s))
