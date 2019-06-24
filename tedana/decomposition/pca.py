@@ -78,10 +78,37 @@ def run_gavishpca(data):
     # do PC dimension selection and get eigenvalue cutoff
     ppca = PCA(n_components=None, svd_solver='full')
     ppca.fit(data)
-    #cutoff = np.median(ppca.singular_values_) * 4 / np.sqrt(3)
-    cutoff = 4.0/np.sqrt(3.0) * np.sqrt(ppca.noise_variance_) * np.sqrt(ppca.n_components_)
-    print(ppca.singular_values_)
+    cutoff = np.median(ppca.singular_values_) * 4 / np.sqrt(3)
     n_dim = np.argmax(ppca.singular_values_ < cutoff) + 1
+    v = ppca.components_[0:n_dim,:].T
+    s = ppca.explained_variance_[0:n_dim]
+    u = np.dot(np.dot(data, v), np.diag(1. / s))
+    return u, s, v
+
+def run_hardpca(data):
+    """
+    Run Singular Value Decomposition (SVD) on input data,
+    automatically hard threshold components on 99%.
+
+    Parameters
+    ----------
+    data : (S [*E] x T) array_like
+        Optimally combined (S x T) or full multi-echo (S*E x T) data.
+
+    Returns
+    -------
+    u : (S [*E] x C) array_like
+        Component weight map for each component.
+    s : (C,) array_like
+        Variance explained for each component.
+    v : (T x C) array_like
+        Component timeseries.
+    """
+    # do PC dimension selection and get eigenvalue cutoff
+    ppca = PCA(n_components=None, svd_solver='full')
+    ppca.fit(data)
+    cutoff = .99
+    n_dim = np.argmax(np.cumsum(ppca.singular_values_)/np.sum(ppca.singular_values_) > cutoff)
     v = ppca.components_[0:n_dim,:].T
     s = ppca.explained_variance_[0:n_dim]
     u = np.dot(np.dot(data, v), np.diag(1. / s))
@@ -114,7 +141,7 @@ def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
         Reference image to dictate how outputs are saved to disk
     tes : :obj:`list`
         List of echo times associated with `data_cat`, in milliseconds
-    algorithm : {'mle', 'kundu', 'kundu-stabilize', 'gavish'}, optional
+    algorithm : {'mle', 'kundu', 'kundu-stabilize', 'gavish', 'hard'}, optional
         Method with which to select components in TEDPCA. Default is 'mle'.
     source_tes : :obj:`int` or :obj:`list` of :obj:`int`, optional
         Which echos to use in PCA. Values -1 and 0 are special, where a value
@@ -213,6 +240,8 @@ def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
         voxel_comp_weights, varex, comp_ts = run_mlepca(data_z)
     elif algorithm == 'gavish':
         voxel_comp_weights, varex, comp_ts = run_gavishpca(data_z)
+    elif algorithm == 'hard':
+        voxel_comp_weights, varex, comp_ts = run_hardpca(data_z)
     else:
         ppca = PCA()
         ppca.fit(data_z)
@@ -263,6 +292,11 @@ def tedpca(data_cat, data_oc, combmode, mask, t2s, t2sG,
         comptable['classification'] = 'accepted'
         comptable['rationale'] = ''
     elif algorithm == 'gavish':
+        LGR.info('Selected {0} components with gavish threshold '
+                 'detection'.format(comptable.shape[0]))
+        comptable['classification'] = 'accepted'
+        comptable['rationale'] = ''
+    elif algorithm == 'hard':
         LGR.info('Selected {0} components with hard threshold '
                  'detection'.format(comptable.shape[0]))
         comptable['classification'] = 'accepted'
